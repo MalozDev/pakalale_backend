@@ -1,0 +1,240 @@
+// prisma/schema.prisma
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// =====================
+// Enums
+// =====================
+enum Role {
+  CUSTOMER
+  SHOP_OWNER
+  ADMIN
+}
+
+enum PostType {
+  REQUEST
+  SHOP_POST
+}
+
+enum RequestStatus {
+  OPEN
+  CLOSED
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// =====================
+// Users
+// =====================
+model User {
+  id         String  @id @default(uuid())
+  name       String
+  email      String  @unique
+  phone      String?
+  password   String
+  role       Role    @default(CUSTOMER)
+  avatarUrl  String?
+  isVerified Boolean @default(false)
+
+  shops         Shop[]
+  posts         Post[]
+  requests      Request[]
+  conversations Conversation[] @relation("UserConversations")
+  messages      Message[]
+  notifications Notification[]
+  favorites     Favorite[]
+  shopReviews   ShopReview[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// =====================
+// Shops
+// =====================
+model Shop {
+  id          String  @id @default(uuid())
+  owner       User    @relation(fields: [ownerId], references: [id])
+  ownerId     String
+  name        String
+  description String?
+  location    String?
+  latitude    Float?
+  longitude   Float?
+  rating      Float?  @default(0)
+  verified    Boolean @default(false)
+
+  products      Product[]
+  reviews       ShopReview[]
+  verifications ShopVerification[]
+
+  posts         Post[]            @relation("ShopPosts")
+  responses     RequestResponse[] @relation("ShopResponses")
+  conversations Conversation[]    @relation("ShopConversations")
+  favorites     Favorite[]        @relation("ShopFavorites")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// =====================
+// Products
+// =====================
+model Product {
+  id          String         @id @default(uuid())
+  shop        Shop           @relation(fields: [shopId], references: [id])
+  shopId      String
+  name        String
+  description String?
+  price       Float
+  quantity    Int
+  category    String?
+  images      ProductImage[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  product   Product  @relation(fields: [productId], references: [id])
+  productId String
+  imageUrl  String
+  createdAt DateTime @default(now())
+}
+
+// =====================
+// Feed / Posts
+// =====================
+model Post {
+  id       String   @id @default(uuid())
+  author   User     @relation(fields: [authorId], references: [id])
+  authorId String
+  postType PostType
+  content  String
+  imageUrl String?
+  location String?
+
+  shop   Shop?   @relation("ShopPosts", fields: [shopId], references: [id])
+  shopId String?
+
+  createdAt DateTime @default(now())
+}
+
+// =====================
+// Requests & Responses
+// =====================
+model Request {
+  id          String        @id @default(uuid())
+  customer    User          @relation(fields: [customerId], references: [id])
+  customerId  String
+  title       String
+  description String
+  location    String?
+  status      RequestStatus @default(OPEN)
+
+  responses RequestResponse[]
+
+  createdAt DateTime @default(now())
+}
+
+model RequestResponse {
+  id        String  @id @default(uuid())
+  request   Request @relation(fields: [requestId], references: [id])
+  requestId String
+
+  shop   Shop   @relation("ShopResponses", fields: [shopId], references: [id])
+  shopId String
+
+  price     Float
+  message   String?
+  imageUrl  String?
+  createdAt DateTime @default(now())
+}
+
+// =====================
+// Chat
+// =====================
+model Conversation {
+  id         String @id @default(uuid())
+  customer   User   @relation("UserConversations", fields: [customerId], references: [id])
+  customerId String
+
+  shop   Shop   @relation("ShopConversations", fields: [shopId], references: [id])
+  shopId String
+
+  messages  Message[]
+  createdAt DateTime  @default(now())
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId String
+  sender         User         @relation(fields: [senderId], references: [id])
+  senderId       String
+  message        String?
+  imageUrl       String?
+  createdAt      DateTime     @default(now())
+}
+
+// =====================
+// Notifications
+// =====================
+model Notification {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// =====================
+// Shop Reviews
+// =====================
+model ShopReview {
+  id         String   @id @default(uuid())
+  shop       Shop     @relation(fields: [shopId], references: [id])
+  shopId     String
+  customer   User     @relation(fields: [customerId], references: [id])
+  customerId String
+  rating     Float
+  comment    String?
+  createdAt  DateTime @default(now())
+}
+
+// =====================
+// Shop Verification
+// =====================
+model ShopVerification {
+  id          String             @id @default(uuid())
+  shop        Shop               @relation(fields: [shopId], references: [id])
+  shopId      String
+  documentUrl String
+  status      VerificationStatus @default(PENDING)
+  submittedAt DateTime           @default(now())
+  reviewedAt  DateTime?
+}
+
+// =====================
+// Favorites
+// =====================
+model Favorite {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  shop      Shop     @relation("ShopFavorites", fields: [shopId], references: [id])
+  shopId    String
+  createdAt DateTime @default(now())
+}
