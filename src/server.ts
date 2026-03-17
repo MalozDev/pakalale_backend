@@ -1,7 +1,4 @@
-import * as dotenv from 'dotenv';
-// Load environment variables before doing anything else
-dotenv.config();
-
+import 'dotenv/config';
 import http from 'http';
 import app from './app'; // Needs '.js' extension depending on ts/esm setup or bundler, keeping standard ts imports
 
